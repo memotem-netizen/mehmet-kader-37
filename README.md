@@ -1,11 +1,22 @@
-<div align="center">
+# Mehmet Kader - Dijital Portfolyo
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Bu proje React, Vite ve Tailwind CSS kullanılarak oluşturulmuştur. Ayrıca Google Gemini API kullanan bir yapay zeka asistanı (Asensio) içerir.
 
-  <h1>Built with AI Studio</h2>
+## Vercel'a Yükleme (Deployment) Adımları
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+1. Bu projeyi GitHub hesabınızda yeni bir repository oluşturup oraya yükleyin.
+2. [Vercel](https://vercel.com) hesabınıza giriş yapın ve "Add New Project" diyerek GitHub'daki bu repository'i seçin.
+3. Proje ayarlarında **Environment Variables (Çevre Değişkenleri)** bölümüne gelin.
+4. Name kısmına `GEMINI_API_KEY`, Value kısmına ise kendi Google Gemini API anahtarınızı yapıştırın.
+5. "Deploy" butonuna tıklayın.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+**Önemli Not:** Yapay zeka asistanının çalışması için Gemini API anahtarının Vercel'da tanımlanmış olması zorunludur. Aksi takdirde asistan yanıt veremez.
 
-</div>
+## Geliştirme (Development)
+
+Projeyi bilgisayarınızda çalıştırmak için:
+
+```bash
+npm install
+npm run dev
+```
