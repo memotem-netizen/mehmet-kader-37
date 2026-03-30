@@ -3,8 +3,18 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle, X, Send, Bot, User, Loader2 } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 
-// Initialize Gemini AI
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Lazy initialization for Gemini AI to prevent app crash if API key is missing
+let aiClient: GoogleGenAI | null = null;
+const getAIClient = () => {
+  if (!aiClient) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === 'undefined' || apiKey === '') {
+      throw new Error("API_KEY_MISSING");
+    }
+    aiClient = new GoogleGenAI({ apiKey });
+  }
+  return aiClient;
+};
 
 type Message = {
   role: 'user' | 'model';
@@ -16,6 +26,7 @@ export default function AIChat({ lang }: { lang: 'tr' | 'en' }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
   const chatRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -24,40 +35,50 @@ export default function AIChat({ lang }: { lang: 'tr' | 'en' }) {
       title: "Asensio",
       placeholder: "Mehmet hakkında bir şey sorun...",
       initialMessage: "Merhaba! Ben Asensio, Mehmet'in yapay zeka asistanıyım. Onun eğitimi, yetenekleri veya projeleri hakkında bana sorular sorabilirsiniz.",
-      error: "Üzgünüm, bir bağlantı hatası oluştu. Lütfen tekrar deneyin."
+      error: "Üzgünüm, bir bağlantı hatası oluştu. Lütfen tekrar deneyin.",
+      missingKey: "Sistem Hatası: Gemini API Anahtarı bulunamadı. Lütfen Vercel ayarlarından GEMINI_API_KEY değişkenini ekleyip projeyi yeniden deploy edin."
     },
     en: {
       title: "Asensio",
       placeholder: "Ask something about Mehmet...",
       initialMessage: "Hi! I'm Asensio, Mehmet's AI assistant. You can ask me questions about his education, skills, or projects.",
-      error: "Sorry, a connection error occurred. Please try again."
+      error: "Sorry, a connection error occurred. Please try again.",
+      missingKey: "System Error: Gemini API Key not found. Please add the GEMINI_API_KEY environment variable in Vercel settings and redeploy."
     }
   }[lang];
 
   // Initialize chat and initial message
   useEffect(() => {
-    if (!chatRef.current) {
-      chatRef.current = ai.chats.create({
-        model: 'gemini-3-flash-preview',
-        config: {
-          systemInstruction: `Senin adın Asensio. Sen Mehmet Kader'in dijital portfolyosundaki yapay zeka asistanısın. 
-          Mehmet, Üsküdar Üniversitesi'nde Yeni Medya ve İletişim okuyor (2023-Günümüz). 
-          Yetenekleri: Sosyal Medya Yönetimi, İçerik Stratejisi, Metin Yazarlığı (Copywriting), Video Kurgu (Premiere Pro), Dijital Pazarlama, SEO Temelleri, Kriz İletişimi, Podcast Prodüksiyonu.
-          Ziyaretçilerin Mehmet hakkında sorduğu sorulara kibar, profesyonel, samimi ve kısa cevaplar ver. 
-          Sadece Mehmet ile ilgili soruları yanıtla, genel konularda "Ben Asensio, sadece Mehmet'in portfolyo asistanıyım" şeklinde kibarca reddet.
-          Kullanıcı hangi dilde (Türkçe veya İngilizce) yazarsa o dilde yanıt ver.`
-        }
-      });
+    try {
+      if (!chatRef.current) {
+        const ai = getAIClient();
+        chatRef.current = ai.chats.create({
+          model: 'gemini-3-flash-preview',
+          config: {
+            systemInstruction: `Senin adın Asensio. Sen Mehmet Kader'in dijital portfolyosundaki yapay zeka asistanısın. 
+            Mehmet, Üsküdar Üniversitesi'nde Yeni Medya ve İletişim okuyor (2023-Günümüz). 
+            Yetenekleri: Sosyal Medya Yönetimi, İçerik Stratejisi, Metin Yazarlığı (Copywriting), Video Kurgu (Premiere Pro), Dijital Pazarlama, SEO Temelleri, Kriz İletişimi, Podcast Prodüksiyonu.
+            Ziyaretçilerin Mehmet hakkında sorduğu sorulara kibar, profesyonel, samimi ve kısa cevaplar ver. 
+            Sadece Mehmet ile ilgili soruları yanıtla, genel konularda "Ben Asensio, sadece Mehmet'in portfolyo asistanıyım" şeklinde kibarca reddet.
+            Kullanıcı hangi dilde (Türkçe veya İngilizce) yazarsa o dilde yanıt ver.`
+          }
+        });
+      }
+      setIsError(false);
+    } catch (error: any) {
+      if (error.message === "API_KEY_MISSING") {
+        setIsError(true);
+      }
     }
     
     // Set initial message based on language if chat is empty
     if (messages.length === 0) {
-      setMessages([{ role: 'model', text: t.initialMessage }]);
+      setMessages([{ role: 'model', text: isError ? t.missingKey : t.initialMessage }]);
     } else if (messages.length === 1 && messages[0].role === 'model') {
       // Update initial message if language changes and no user messages yet
-      setMessages([{ role: 'model', text: t.initialMessage }]);
+      setMessages([{ role: 'model', text: isError ? t.missingKey : t.initialMessage }]);
     }
-  }, [lang, t.initialMessage]);
+  }, [lang, t.initialMessage, t.missingKey, isError, messages.length]);
 
   // Auto-scroll to bottom
   useEffect(() => {
